@@ -88,8 +88,14 @@ object SplayTree {
 
     val Zero = NilTree
 
-    def ifDef[T >: A](f: (Node[T]) => Tree[T]): Tree[T] = this match {
-      case NilTree => NilTree
+
+    //    def ifDef[T >: A](f: (Node[T]) => Node[T]): Option[Node[T]] = this match {
+    //      case NilTree => None
+    //      case n: Node[T] => Some(f(n))
+    //    }
+    //
+    def flatMap[T >: A](f: (Node[T]) => Option[Node[T]]): Option[Node[T]] = this match {
+      case NilTree => None
       case n: Node[T] => f(n)
     }
 
@@ -98,7 +104,12 @@ object SplayTree {
       case n: Node[T] => n insert elem; n
     }
 
-    def remove [T >: A](elem: T)(implicit ordering: Ordering[T]): Tree[T] = this match {
+    def toOption[U >: A]: Option[Node[U]] = this match {
+      case NilTree => None
+      case n: Node[U] => Some(n)
+    }
+
+    def remove[T >: A](elem: T)(implicit ordering: Ordering[T]): Tree[T] = this match {
       case NilTree => throw new IllegalStateException("Can not remove element from the empty tree")
       case n: Node[T] if n.isLeaf => if (n.key == elem) NilTree else throw new NoSuchElementException
       case n: Node[T] => n remove elem; n
@@ -127,6 +138,8 @@ object SplayTree {
 
     def isRightChild = parent.right == this
 
+    def sibling = if (isLeftChild) parent.right.toOption else if (isRightChild) parent.left.toOption else None
+
     @tailrec
     final def root: Node[A] = if (isRoot) this else parent.root
 
@@ -153,18 +166,37 @@ object SplayTree {
       moreParent(this, Stream.empty[Node[A]])
     }
 
-    def findNext: Tree[A] = right.ifDef(_ min) <|> parents.find(_ isLeftChild) match {
-      case None => NilTree
-      case Some(NilTree) => NilTree
-      case Some(n: Node[A]) => n.parent.right ifDef (_ min)
-    }
+    def findNext: Option[Node[A]] = ( right flatMap {
+      r => Some(r.min)
+    } ) <|> (
+      parents.find(_ isLeftChild) flatMap {
+        _.sibling flatMap (s => Some(s min))
+      }
+    )
+    def findPrev: Option[Node[A]] = (left flatMap {
+      r=> Some(r.min)
+    }) <|> (
+      parents.find(_ isRightChild) flatMap {
+        _.sibling flatMap (s=> Some(s max))
+      }
+      )
 
-
-    def findPrev: Tree[A] = left.ifDef(_ max) <|> parents.find(_ isRightChild) match {
-      case None => NilTree
-      case Some(NilTree) => NilTree
-      case Some(n: Node[A]) => n.parent.left ifDef (_ max)
-    }
+    //
+    //    def findNext: Tree[A] = right $ { r => Some(r.min) } <|> withAlternative(parents.find(_ isLeftChild)) match {
+    //      case None => NilTree
+    //      case Some(NilTree) => NilTree
+    //      case Some(n: Node[A]) => n.parent.right $ (_ min)
+    //    }
+    //
+    //
+    //    def findPrev: Tree[A] = left match {
+    //      case NilTree => None
+    //      case n:Node[A] => n.max
+    //    } <|> parents.find(_ isRightChild) match {
+    //      case None => NilTree
+    //      case Some(NilTree) => NilTree
+    //      case Some(n: Node[A]) => n.parent.left $ (_ max)
+    //    }
 
     def insertLeft(elem: A): Node[A] = {
       left = new Node[A](elem, this)()
@@ -214,27 +246,27 @@ object SplayTree {
     def hasOneChild = hasLeft ^ hasRight
 
     def remove(elem: A)(implicit ordering: Ordering[A]): Unit = find(elem) match {
-      case NilTree => throw new NoSuchElementException
-      case n: Node[A] => n.remove()
+      case None => throw new NoSuchElementException
+      case Some(n) => n.remove()
     }
 
 
     def remove(): Unit =
-      (left,right) match {
-        case (NilTree,NilTree) =>
+      (left, right) match {
+        case (NilTree, NilTree) =>
           println(s"removing leaf $key ")
           if (isLeftChild) parent.left = NilTree
           if (isRightChild) parent.right = NilTree
           parent = this
-        case (l:Node[A], NilTree) =>
-          println( s"replacing contents of $key with ${l.key}")
+        case (l: Node[A], NilTree) =>
+          println(s"replacing contents of $key with ${l.key}")
           replaceContents(l)
-        case (NilTree, r:Node[A]) =>
-          println( s"replacing contents of $key with ${r.key}")
+        case (NilTree, r: Node[A]) =>
+          println(s"replacing contents of $key with ${r.key}")
           replaceContents(r)
-        case (l:Node[A], r:Node[A]) =>
+        case (l: Node[A], r: Node[A]) =>
           val toSwap = (findPrev <|> findNext).asInstanceOf[Node[A]]
-          println( s"swapping $key with ${toSwap.key}")
+          println(s"swapping $key with ${toSwap.key}")
           toSwap.swapKey(this)
           toSwap.remove()
       }
@@ -250,7 +282,7 @@ object SplayTree {
 
     def swap(efst: A, esnd: A)(implicit ordering: Ordering[A]) = {
       (find(efst), find(esnd)) match {
-        case (fst: Node[A], snd: Node[A]) =>
+        case (Some(fst),Some(snd)) =>
           fst.key = esnd
           snd.key = efst
         case _ => throw new IllegalArgumentException(s"At least one of the elements to be swapped is not present: $efst $esnd")
@@ -258,11 +290,15 @@ object SplayTree {
 
     }
 
-    def find(elem: A)(implicit ordering: Ordering[A]): Tree[A] =
+    def find(elem: A)(implicit ordering: Ordering[A]): Option[Node[A]] =
       ordering.compare(elem, key) match {
-        case -1 => left ifDef (_ find elem)
-        case 0 => this
-        case 1 => right ifDef (_ find elem)
+        case -1 => left flatMap {
+          _ find elem
+        } //(_ find elem)
+        case 0 => Some(this)
+        case 1 => right flatMap {
+          _ find elem
+        }
         case _ => throw new IllegalArgumentException("Invalid ordering!")
       }
 

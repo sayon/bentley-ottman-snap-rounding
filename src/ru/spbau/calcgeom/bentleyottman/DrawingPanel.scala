@@ -7,12 +7,6 @@ import java.awt.{Color, Graphics2D, Graphics}
 import java.awt.event.{ComponentEvent, ComponentListener}
 
 
-
-
-
-
-
-
 class DrawingPanel extends JPanel {
 
   implicit var plane: CartesianPlane =
@@ -57,6 +51,7 @@ class DrawingPanel extends JPanel {
       case Some(seg) =>
         segments = seg :: segments
         if (segments.size >= 2) {
+          intersections = Intersections(segments) map { _ position }
           //intersections = SegmentIntersectionsSolver(segments).map(_.d)
           println(s"intersections $intersections")
         }

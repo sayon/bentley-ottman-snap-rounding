@@ -10,25 +10,20 @@ class SweepLine {
     buffer match {
       case NilTree => None
       case n: Node[Segment] => n find seg match {
-        case NilTree => throw new NoSuchElementException
-        case r: Node[Segment] => r.findPrev match {
-          case NilTree => None
-          case a: Node[Segment] => Some(a.key)
+        case None => throw new NoSuchElementException
+        case Some(r) => r.findPrev flatMap (a => Some(a key))
         }
       }
-    }
+
 
   def below(seg: Segment): Option[Segment] =
     buffer match {
       case NilTree => None
       case n: Node[Segment] => n find seg match {
-        case NilTree => throw new NoSuchElementException
-        case r: Node[Segment] => r.findNext match {
-          case NilTree => None
-          case a: Node[Segment] => Some(a.key)
+        case None => throw new NoSuchElementException
+        case Some(r) => r.findNext flatMap( b => Some(b key) )
         }
       }
-    }
 
   def cross(seg: Segment) = {
     buffer = buffer add seg
@@ -41,8 +36,8 @@ class SweepLine {
   private[this] def orderedPair(fst: Segment, snd: Segment) = {
     val b = buffer.asInstanceOf[Node[Segment]]
     (b find fst, b find snd) match {
-      case (f: Node[Segment], s: Node[Segment]) if f.findNext == s => (f.key, s.key)
-      case (f: Node[Segment], s: Node[Segment]) if s.findNext == f => (s.key, f.key)
+      case (Some(f), Some(s)) if f.findNext == s => (f.key, s.key)
+      case (Some(f), Some(s)) if s.findNext == f => (s.key, f.key)
       case _ => throw new IllegalStateException("Can not determine which one is above, which one is below!")
     }
   }

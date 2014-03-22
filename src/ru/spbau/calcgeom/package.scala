@@ -29,5 +29,10 @@ package object bentleyottman {
     }
   }
 
+  trait AlternativeOption[T] extends Alternative[Option[T]] {
+    val Zero = None
+  }
+  implicit def withAlternative[T](o:Option[T]) = o.asInstanceOf[Option[T] with AlternativeOption[T]]
+
 
 }
