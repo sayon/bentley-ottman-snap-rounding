@@ -3,7 +3,7 @@ package ru.spbau.calcgeom.bentleyottman
 import ru.spbau.calcgeom.bentleyottman.World._
 import scala.collection.mutable
 
-object SegmentIntersectionSolver {
+object Intersections {
 
   abstract class Event(val position: Dot) extends Ordered[Event] {
     def compare(that: Event) = position.x compare that.position.x
@@ -52,7 +52,6 @@ object SegmentIntersectionSolver {
         case Right(seg) =>
           enqueueIntersection(sweepLine above seg, sweepLine below seg)
           sweepLine uncross seg
-
         case i@Intersection(above, below, point) =>
           intersections ::= i
           val (newAbove, newBelow) = sweepLine.handleIntersection(above, below)
