@@ -93,7 +93,7 @@ object SplayTree {
       case n: Node[T] => f(n)
     }
 
-    def +[T >: A](elem: T)(implicit ordering: Ordering[T]): Node[T] = this match {
+    def add[T >: A](elem: T)(implicit ordering: Ordering[T]): Node[T] = this match {
       case NilTree => Tree.makeRoot(elem)
       case n: Node[T] => n insert elem; n
     }
