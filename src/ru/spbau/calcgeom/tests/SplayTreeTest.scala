@@ -7,7 +7,7 @@ import ru.spbau.calcgeom.bentleyottman.SplayTree.{Node, Tree, NilTree}
 class SplayTreeTest {
   @Test
   def objectCreation() = {
-    assertEquals("( Nil { 1 } ( Nil { 2 } ( Nil { 3 } ( Nil { 4 } Nil ) ) ) )", Tree(1, 2, 3, 4))
+    assertEquals("( Nil { 1 } ( Nil { 2 } ( Nil { 3 } ( Nil { 4 } Nil ) ) ) )", Tree(1, 2, 3, 4).toString)
   }
 
   @Test
