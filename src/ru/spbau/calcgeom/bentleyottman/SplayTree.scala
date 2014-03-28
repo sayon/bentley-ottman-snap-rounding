@@ -46,12 +46,20 @@ object SplayTree {
   protected def rightZigZag[A](grandParent: Node[A], parent: Node[A], newRoot: Node[A]): Node[A] = {
     val newX = leftRotation(parent, newRoot)
     grandParent.left = newX
+    grandParent.left match {
+      case NilTree =>
+      case n: Node[A] => n.parent = grandParent
+    }
     rightRotation(newX, grandParent)
   }
 
   protected def leftZigZag[A](grandParent: Node[A], parent: Node[A], newRoot: Node[A]): Node[A] = {
     val newX = rightRotation(parent, newRoot)
     grandParent.right = newX
+    grandParent.right match {
+      case NilTree =>
+      case n: Node[A] => n.parent = grandParent
+    }
     leftRotation(newX, grandParent)
   }
 
@@ -65,13 +73,30 @@ object SplayTree {
 
   protected def leftRotation[A](prevRoot: Node[A], newRoot: Node[A]): Node[A] = {
     prevRoot.right = newRoot.left
+
     newRoot.left = prevRoot
+    prevRoot.right match {
+      case NilTree =>
+      case n: Node[A] => n.parent = prevRoot
+    }
+    newRoot.left match {
+      case NilTree =>
+      case n: Node[A] => n.parent = prevRoot
+    }
     newRoot
   }
 
   protected def rightRotation[A](newRoot: Node[A], prevRoot: Node[A]): Node[A] = {
     prevRoot.left = newRoot.right
     newRoot.right = prevRoot
+    prevRoot.left match {
+      case NilTree =>
+      case n: Node[A] => n.parent = prevRoot
+    }
+    newRoot.right match {
+      case NilTree =>
+      case n: Node[A] => n.parent = prevRoot
+    }
     newRoot
   }
 
@@ -81,19 +106,18 @@ object SplayTree {
       r.parent = r
       r
     }
+
+    def apply[T](elems: T*)(implicit ordering: Ordering[T]): Node[T] =
+      elems.foldLeft[Tree[T]](NilTree)((node: Tree[T], el) => node.add(el)).asInstanceOf[Node[T]]
   }
 
-  abstract class Tree[+A] extends Alternative[Tree[A]] {
+  abstract class Tree[+A] {
 
+    def or[U >: A](other: Tree[U]) = this match {
+      case NilTree => other
+      case n: Node[A] => this
+    }
 
-    val Zero = NilTree
-
-
-    //    def ifDef[T >: A](f: (Node[T]) => Node[T]): Option[Node[T]] = this match {
-    //      case NilTree => None
-    //      case n: Node[T] => Some(f(n))
-    //    }
-    //
     def flatMap[T >: A](f: (Node[T]) => Option[Node[T]]): Option[Node[T]] = this match {
       case NilTree => None
       case n: Node[T] => f(n)
@@ -104,7 +128,7 @@ object SplayTree {
       case n: Node[T] => n insert elem; n
     }
 
-    def toOption[U >: A]: Option[Node[U]] = this match {
+    implicit def toOption[U >: A]: Option[Node[U]] = this match {
       case NilTree => None
       case n: Node[U] => Some(n)
     }
@@ -128,17 +152,17 @@ object SplayTree {
 
     def unapply[T >: A](t: Node[T]): Option[(Tree[T], Tree[T], Tree[T], T)] = Some(t.left, t.parent, t.right, t.key)
 
-    def isLeftChild = parent.left == this
+    def isLeftChild = parent.left eq this
 
     def isLeaf = left == NilTree && right == NilTree
 
     def hasLeft = left != NilTree
 
-    def hasRight = left != NilTree
+    def hasRight = right != NilTree
 
-    def isRightChild = parent.right == this
+    def isRightChild = parent.right eq this
 
-    def sibling = if (isLeftChild) parent.right.toOption else if (isRightChild) parent.left.toOption else None
+    def sibling: Option[Node[A]] = if (isLeftChild) parent.right.toOption else if (isRightChild) parent.left.toOption else None
 
     @tailrec
     final def root: Node[A] = if (isRoot) this else parent.root
@@ -158,45 +182,21 @@ object SplayTree {
     }
 
 
-    def parents: Stream[Node[A]] = {
-      @tailrec
-      def moreParent(node: Node[A], s: Stream[Node[A]]): Stream[Node[A]] = if (!node.isRoot)
-        moreParent(node.parent, Stream.cons(node, s))
-      else s
-      moreParent(this, Stream.empty[Node[A]])
+    def parents: List[Node[A]] = {
+      def full(node: Node[A], parents: List[Node[A]] = Nil): List[Node[A]] = if (node.isRoot) parents else full(node.parent, node.parent :: parents)
+      full(this).reverse
     }
 
-    def findNext: Option[Node[A]] = ( right flatMap {
-      r => Some(r.min)
-    } ) <|> (
-      parents.find(_ isLeftChild) flatMap {
-        _.sibling flatMap (s => Some(s min))
-      }
-    )
-    def findPrev: Option[Node[A]] = (left flatMap {
-      r=> Some(r.min)
-    }) <|> (
-      parents.find(_ isRightChild) flatMap {
-        _.sibling flatMap (s=> Some(s max))
-      }
-      )
+    def findNext: Option[Node[A]] =
+      if (hasRight) right flatMap (r => Some(r.min))
+      else
+        ((this :: parents) find (_ isLeftChild)) flatMap (n => Some(n.parent))
 
-    //
-    //    def findNext: Tree[A] = right $ { r => Some(r.min) } <|> withAlternative(parents.find(_ isLeftChild)) match {
-    //      case None => NilTree
-    //      case Some(NilTree) => NilTree
-    //      case Some(n: Node[A]) => n.parent.right $ (_ min)
-    //    }
-    //
-    //
-    //    def findPrev: Tree[A] = left match {
-    //      case NilTree => None
-    //      case n:Node[A] => n.max
-    //    } <|> parents.find(_ isRightChild) match {
-    //      case None => NilTree
-    //      case Some(NilTree) => NilTree
-    //      case Some(n: Node[A]) => n.parent.left $ (_ max)
-    //    }
+
+    def findPrev: Option[Node[A]] =
+      if (hasLeft) left flatMap (_.min.toOption)
+      else ((this :: parents) find (_.isRightChild)) flatMap (_.parent.toOption)
+
 
     def insertLeft(elem: A): Node[A] = {
       left = new Node[A](elem, this)()
@@ -225,7 +225,8 @@ object SplayTree {
           case _ => throw new IllegalArgumentException("Invalid ordering!")
         }
 
-      splay(insertRoutine(this, elem), key)
+      insertRoutine(this, elem)
+      splay(this, key)
     }
 
 
@@ -265,7 +266,7 @@ object SplayTree {
           println(s"replacing contents of $key with ${r.key}")
           replaceContents(r)
         case (l: Node[A], r: Node[A]) =>
-          val toSwap = (findPrev <|> findNext).asInstanceOf[Node[A]]
+          val toSwap = (findPrev orElse findNext).get
           println(s"swapping $key with ${toSwap.key}")
           toSwap.swapKey(this)
           toSwap.remove()
@@ -282,7 +283,7 @@ object SplayTree {
 
     def swap(efst: A, esnd: A)(implicit ordering: Ordering[A]) = {
       (find(efst), find(esnd)) match {
-        case (Some(fst),Some(snd)) =>
+        case (Some(fst), Some(snd)) =>
           fst.key = esnd
           snd.key = efst
         case _ => throw new IllegalArgumentException(s"At least one of the elements to be swapped is not present: $efst $esnd")
