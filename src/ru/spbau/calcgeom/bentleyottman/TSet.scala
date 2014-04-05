@@ -2,19 +2,21 @@ package ru.spbau.calcgeom.bentleyottman
 
 import scala.annotation.tailrec
 
-object TSet{
+object TSet {
   def empty[T <% Ordered[T]] = new TSet[T]
-  def apply[T <% Ordered[T]](elems: T*) : TSet[T]={
+
+  def apply[T <% Ordered[T]](elems: T*): TSet[T] = {
     val acc = empty[T]
-    elems.foreach( acc += _ )
+    elems.foreach(acc += _)
     acc
   }
 }
+
 class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
 
   sealed class ElementExistsException extends Exception
 
-  private var root: Tree = Nil
+  var root: Tree = Nil
 
   sealed abstract class Tree {
     def flatMap(f: Node => Option[Node]): Option[Node]
@@ -34,6 +36,8 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
     override def toOption: Option[Node] = None
 
     override def copy: Tree = Nil
+
+    override val toString = ""
   }
 
   sealed case class Node(var key: T, var left: Tree = Nil, var right: Tree = Nil, var parent: Tree = Nil) extends Tree {
@@ -48,13 +52,13 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
     def isLeaf = !(hasLeft || hasRight)
 
     def isLeftChild = parent match {
-      case Nil => false
       case Node(_, l, _, _) if l == this => true
+      case _ => false
     }
 
     def isRightChild = parent match {
-      case Nil => false
       case Node(_, _, r, _) if r == this => true
+      case _ => false
     }
 
     def add(elem: T): Node = {
@@ -79,10 +83,10 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
 
     def ancestors: List[Node] = {
       @tailrec
-      def getall(n: Node, list: List[Node] = List.empty): List[Node] = {
+      def getall(n: Node, list: List[Node] = List.empty[Node]): List[Node] = {
         n.parent match {
           case Nil => list
-          case par@Node(_, _, _, p) => getall(par, par :: list)
+          case par: Node => getall(par, par :: list)
         }
       }
       getall(this)
@@ -90,21 +94,15 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
 
     def family = this :: ancestors
 
-    //          def next: Option[N] = {
-    //            val rightMin = right.toOption flatMap (r => Some(r.min))
-    //            lazy val rightChildParent = family find (_ isRightChild) flatMap (_.parent.toOption)
-    //            rightMin orElse rightChildParent
-    //          }
-
     def next: Option[Node] = {
       val rightMin = right flatMap (r => Some(r.min))
-      lazy val rightChildParent = family find (_ isRightChild) flatMap (_.parent.toOption)
+      lazy val rightChildParent = family find (_ isLeftChild) flatMap (_.parent.toOption)
       rightMin orElse rightChildParent
     }
 
     def prev: Option[Node] = {
       val leftMax = left flatMap (l => Some(l.max))
-      lazy val leftChildParent = family find (_ isLeftChild) flatMap (_.parent.toOption)
+      lazy val leftChildParent = family find (_ isRightChild) flatMap (_.parent.toOption)
       leftMax orElse leftChildParent
     }
 
@@ -148,13 +146,17 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
       case -1 => left find e
       case 0 => Some(this)
       case 1 => right find e
+      case _ => throw new IllegalStateException("Invalid comparer")
     }
 
 
     override def flatMap(f: (TSet.this.type#Node) => Option[TSet.this.type#Node]): Option[TSet.this.type#Node] = f(this)
 
     override def copy: Tree = Node(key, left.copy, right.copy, parent)
+    override def toString = s"{$left ($key) $right}"
   }
+
+  def find(elem: T): Option[Node] = root find elem
 
   override def iterator: Iterator[T] = {
     //can be way more efficient and lazy.
@@ -185,7 +187,7 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
   override def -=(elem: T): this.type = {
     root find elem match {
       case None => throw new NoSuchElementException
-      case Some(n:Node) => n.delete(); this
+      case Some(n: Node) => n.delete(); this
     }
   }
 
@@ -197,14 +199,14 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
     this
   }
 
-  def next(elem:T): Option[T] = root find elem match {
-    case None => None
-    case Some(node: Node) => node.next flatMap ( n => Some(n.key))
+  def nextNode(elem: T): Option[Node] = root find elem match {
+    case None => throw new NoSuchElementException
+    case Some(node: Node) => node.next flatMap (n => Some(n))
   }
 
-  def prev(elem:T): Option[T] = root find elem match {
-    case None => None
-    case Some(node: Node) => node.prev flatMap ( n => Some(n.key))
+  def previousNode(elem: T): Option[Node] = root find elem match {
+    case None => throw new NoSuchElementException
+    case Some(node: Node) => node.prev flatMap (n => Some(n))
   }
 
 }

@@ -44,7 +44,7 @@ class MainForm extends JFrame("Bentley Ottman") {
     def mouseClicked(e: MouseEvent): Unit = {
       val p = e.getLocationOnScreen
       SwingUtilities.convertPointFromScreen(p, drawer)
-      println(s"${e.getX} ${e.getY}, pic pos : $p")
+      //println(s"${e.getX} ${e.getY}, pic pos : $p")
       drawer.addDot((p.x, p.y))
     }
 

@@ -51,8 +51,12 @@ class DrawingPanel extends JPanel {
       case Some(seg) =>
         segments = seg :: segments
         if (segments.size >= 2) {
-          intersections = Intersections(segments) map { _ position }
+          println( "for segments " + segments.foldLeft("")(_ + " " + _))
+//          intersections = Intersections(segments) map ( _.position )
           //intersections = SegmentIntersectionsSolver(segments).map(_.d)
+          intersections map {
+            x => printf(x + " ")
+          }
           println(s"intersections $intersections")
         }
 

@@ -1,8 +1,6 @@
 package ru.spbau.calcgeom.bentleyottman
 import World._
-/**
- * Created by Sayon on 16.03.14.
- */
+
 sealed class SegmentBuilder {
   private[this] var dot: Option[Dot] = None
 
