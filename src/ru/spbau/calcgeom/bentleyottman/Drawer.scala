@@ -27,7 +27,7 @@ object Drawer {
 
   def drawDot(d: Dot)(implicit g: Graphics2D, frame: WindowFrame, color: Color, size: Int = DOT_RADIUS) = inNewContext(g)(() => {
     val p = frame.project(d)
-    println(p)
+//    println(p)
     g.setColor(color)
     g.fillOval(p._1 - size, p._2 - size, 2 * size, 2 * size)
   })

@@ -1,9 +1,7 @@
 package ru.spbau.calcgeom.bentleyottman
 
 import World._
-/**
- * Created by Sayon on 16.03.14.
- */
+
 sealed class WindowFrame(val frame: Frame, val size: (Int, Int)) {
   def project(d: Dot): (Int, Int) = {
     val p = frame.project(d)
@@ -23,7 +21,6 @@ sealed class WindowFrame(val frame: Frame, val size: (Int, Int)) {
   private[this] val getTransposeDeltaX = frame.size._1 / 10
 
   private[this] val getTransposeDeltaY = frame.size._2 / 10
-
 
   def moveUp: WindowFrame = new WindowFrame(new Frame(frame.leftTop +(0.0, getTransposeDeltaY), frame.size), size)
 
