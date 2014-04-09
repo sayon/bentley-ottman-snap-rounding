@@ -18,8 +18,10 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
 
   var root: Tree = Nil
 
-  def min = root.flatMap( n => Some(n.min) )
-  def max = root.flatMap( n => Some(n.max) )
+  def min = root.flatMap(n => Some(n.min))
+
+  def max = root.flatMap(n => Some(n.max))
+
   sealed abstract class Tree {
     def flatMap(f: Node => Option[Node]): Option[Node]
 
@@ -61,12 +63,20 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
 
   sealed case class Node(var key: T, var left: Tree = Nil, var right: Tree = Nil, var parent: Tree = Nil) extends Tree {
 
+    def setRight(t:Tree) = t match {
+      case Nil => right = t
+      case n:Node => right = t; n.parent = this
+    }
+    def setLeft(t:Tree) = t match {
+      case Nil => left = t
+      case n:Node => left = t; n.parent = this
+    }
 
     def childType: ChildType = parent match {
       case Nil => Root
       case Node(_, l, _, _) if l == this => LeftChild
       case Node(_, _, r, _) if r == this => RightChild
-      case _ => throw new IllegalStateException()
+      case _ => println(this); println(parent); throw new IllegalStateException()
     }
 
     def toOption = Some(this)
@@ -85,7 +95,7 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
 
     def add(elem: T): Node = elem compare key match {
       case -1 => left match {
-        case Nil => left = new Node(elem, Nil, Nil, this); left.asInstanceOf[Node]
+        case Nil => setLeft(new Node(elem, Nil, Nil, this)); left.asInstanceOf[Node]
         case n: Node => n add elem
       }
       case 0 => throw new ElementExistsException
@@ -140,14 +150,14 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
     def delete(): Unit = {
       def replaceWith(other: Node) = {
         key = other.key
-        left = other.left
-        right = other.right
+        setLeft(other.left)
+        setRight(other.right)
       }
       if (this == root && isLeaf) root = Nil
       else this match {
         case Node(_, Nil, Nil, _) => parent match {
-          case p@Node(_, l, _, _) if l == this => p.left = Nil
-          case p@Node(_, _, r, _) if r == this => p.right = Nil
+          case p@Node(_, l, _, _) if l == this => p setLeft Nil
+          case p@Node(_, _, r, _) if r == this => p setRight  Nil
         }
         case Node(_, n: Node, Nil, _) => replaceWith(n)
         case Node(_, Nil, n: Node, _) => replaceWith(n)
@@ -190,26 +200,36 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
 
   override def headOption = root match {
     case Nil => None
-    case n:Node => Some( n.min.key )
+    case n: Node => Some(n.min.key)
   }
 
   override def lastOption = root match {
     case Nil => None
-    case n:Node => Some(n.max.key)
+    case n: Node => Some(n.max.key)
 
   }
-  override def iterator: Iterator[T] = {
-    //can be way more efficient and lazy.
-    var list = List.empty[T]
-    def routine(t: Tree): Unit = t match {
-      case Nil =>
-      case n: Node =>
-        routine(n.right)
-        list ::= n.key
-        routine(n.left)
+
+  override def iterator: Iterator[T] = root match {
+    case Nil => Iterator.empty
+    case rt: Node => new Iterator[T] {
+
+      private val _first = rt.min
+      private val _last = rt.max
+      private var _current: Option[Node] = None
+
+      override def next(): T = {
+        _current = _current match {
+          case None => Some(_first)
+          case Some(n) => n.next
+        }
+        _current.get.key
+      }
+
+      override def hasNext: Boolean = _current match {
+        case None => true
+        case Some(n) => n != _last
+      }
     }
-    routine(root)
-    list.iterator
   }
 
   override def contains(elem: T): Boolean = root match {
@@ -227,7 +247,7 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
   override def -=(elem: T): this.type = {
     root find elem match {
       case None => throw new NoSuchElementException
-      case Some(n: Node) =>   n.delete(); this
+      case Some(n: Node) => n.delete(); this
     }
   }
 
@@ -255,37 +275,31 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
 
     def left(x: Node) = {
       val y = x.right.forceNode
-      x.right = y.left
-      y.left match {
-        case n: Node => n.parent = x
-        case Nil =>
-      }
+      x setRight y.left
+
       y.parent = x.parent
-      x.parent match {
-        case Nil => root = y
-        case p: Node => if (x == p.left) p.left = y else p.right = y
+      x.childType match {
+        case Root => root = y
+        case LeftChild => x.parent.forceNode setLeft  y
+        case RightChild => x.parent.forceNode setRight  y
       }
-      y.left = x
-      x.parent = y
+      y setLeft x
     }
 
     def right(x: Node) = {
       val y = x.left.forceNode
-      x.left = y.right
-      y.right match {
-        case Nil =>
-        case yr: Node => yr.parent = x
-      }
+      x setLeft y.right
+
       y.parent = x.parent
-      x.parent match {
-        case Nil => root = y
-        case xp: Node => if (x == xp.left) xp.left = y else xp.right = y
+      x.childType match {
+        case Root => root = y
+        case LeftChild => x.parent.forceNode setLeft y
+        case RightChild => x.parent.forceNode setRight y
       }
-      y.right = x
-      x.parent = y
+      y setRight x
     }
 
-    def apply(x: Node): Unit ={
+    def apply(x: Node): Unit = {
       while (x.parent.isNode) {
         val xp = x.parent.forceNode
         lazy val xpp = xp.parent.forceNode
