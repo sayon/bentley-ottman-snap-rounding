@@ -188,6 +188,16 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
 
   def find(elem: T): Option[Node] = root find elem
 
+  override def headOption = root match {
+    case Nil => None
+    case n:Node => Some( n.min.key )
+  }
+
+  override def lastOption = root match {
+    case Nil => None
+    case n:Node => Some(n.max.key)
+
+  }
   override def iterator: Iterator[T] = {
     //can be way more efficient and lazy.
     var list = List.empty[T]
