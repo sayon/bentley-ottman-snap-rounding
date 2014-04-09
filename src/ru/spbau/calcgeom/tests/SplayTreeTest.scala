@@ -33,13 +33,20 @@ class SplayTreeTest {
   @Test
   def prevNext() = {
     def check[T](prv: T, nxt: T)(implicit set: TSet[T]) = {
-      assertEquals((set previousNode  nxt).get.key.toString, prv.toString)
-      assertEquals((set nextNode prv).get.key.toString, nxt.toString)
+      assertEquals(prv.toString, (set previousNode nxt).get.key.toString)
+      assertEquals(nxt.toString, (set nextNode prv).get.key.toString)
     }
 
+
     implicit val s = TSet(4, 3, 5, 2, 1, 9)
+
+    println(s.root)
+
+    check(1, 2)
     check(2, 3)
     check(4, 5)
     check(5, 9)
+    check(5, 9)
   }
 }
+
