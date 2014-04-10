@@ -30,6 +30,14 @@ class SplayTreeTest {
     assertEquals("Set(1, 2, 3, 4, 9)", s.toString())
   }
 
+
+  @Test
+  def swap() = {
+    val s = TSet(4, 3, 5, 2, 1, 9)
+    s.swapElements(3,4)
+    assertEquals("Set(1, 2, 4, 3, 5, 9)", s.toString())
+  }
+
   @Test
   def prevNext() = {
     def check[T](prv: T, nxt: T)(implicit set: TSet[T]) = {

@@ -271,6 +271,12 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
     case Some(node: Node) => node.prev flatMap (n => Some(n))
   }
 
+  //use with caution for it is a hack needed to achieve good performance on bentley-ottman algorithm
+  def swapElements(fst:T, snd:T) = (root find fst, root find snd) match {
+    case (Some(e1),Some(e2)) => e1 swap e2
+    case _ => throw new NoSuchElementException
+  }
+
   object Splay {
 
     def left(x: Node) = {

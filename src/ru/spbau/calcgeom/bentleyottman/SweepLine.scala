@@ -1,36 +1,23 @@
 //package ru.spbau.calcgeom.bentleyottman
 //
-//import ru.spbau.calcgeom.bentleyottman.SplayTree.{Node, Tree, NilTree}
+//
 //import ru.spbau.calcgeom.bentleyottman.World.Segment
 //
 //class SweepLine {
-//  private[this] var buffer: Tree[Segment] = NilTree
+//private var x : Double = Double.NegativeInfinity
+//  private[this] var buffer = TSet.empty[Segment]
 //
-//  def above(seg: Segment): Option[Segment] =
-//    buffer match {
-//      case NilTree => None
-//      case n: Node[Segment] => n find seg match {
-//        case None => throw new NoSuchElementException
-//        case Some(r) => r.findPrev flatMap (a => Some(a key))
-//        }
-//      }
+//  def above(seg: Segment): Option[Segment] = buffer.previousNode( seg ) flatMap( n=>Some(n.key))
+//  def below(seg: Segment): Option[Segment] = buffer.nextNode( seg ) flatMap( n=>Some(n.key))
 //
 //
-//  def below(seg: Segment): Option[Segment] =
-//    buffer match {
-//      case NilTree => None
-//      case n: Node[Segment] => n find seg match {
-//        case None => throw new NoSuchElementException
-//        case Some(r) => r.findNext flatMap( b => Some(b key) )
-//        }
-//      }
 //
 //  def cross(seg: Segment) = {
-//    buffer = buffer add seg
+//    buffer += seg
 //  }
 //
 //  def uncross(seg: Segment) = {
-//    buffer = buffer remove seg
+//    buffer -= seg
 //  }
 //
 //  private[this] def orderedPair(fst: Segment, snd: Segment) = {
