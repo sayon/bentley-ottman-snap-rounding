@@ -19,7 +19,7 @@ object World {
   def above(seg:Segment)(check:Dot) = leftTurn(seg.left, seg.right, check)
 
   //a.x * b.y * c.z  + a.y * b.z * c.x + b.x * c.y * a.z - a.z*b.y
-  class Dot(val x: Double, val y: Double) extends PlaneObject with Ordered[Dot] {
+  case class Dot(x: Double, y: Double) extends PlaneObject with Ordered[Dot] {
 
     protected[this] def component(f: (Double, Double) => Double)(that: Dot): Dot = new Dot(f(x, that.x), f(y, that.y))
 
@@ -54,18 +54,30 @@ object World {
 
   type CartesianPlane = List[PlaneObject]
 
-  class Segment(fst: Dot, snd: Dot) extends PlaneObject with Ordered[Segment] {
+  def vertical( x: Double )(implicit seg: Segment) = new Segment((x,seg.topBox), (x,seg.botBox))
+
+  class Segment(fst: Dot, snd: Dot) extends PlaneObject  {
     val left = if (fst.x < snd.x) fst else snd
     val right = if (fst == left) snd else fst
 
+    val topBox = left.y max right.y
+    val botBox = left.y min right.y
+
+    val leftBox = left.x
+    val rightBox = right.x
+
     implicit def toPair: (Dot, Dot) = (left, right)
 
-    def compare(that: Segment): Int = {
-      val leftcomp = this.left compare that.left
-      if (leftcomp != 0) leftcomp else this.right compare that.right
+    def yForX(x: Double) : Option[Double] = {
+      if (x < left.x || x > right.x ) None
+      else intersect(vertical(x)(this)) flatMap (d => Some(d.x))
     }
+//    def compare(that: Segment): Int = {
+//      val leftcomp = this.left compare that.left
+//      if (leftcomp != 0) leftcomp else this.right compare that.right
+//    }
 
-    def minAndMax(that: Segment): (Segment, Segment) = if (compare(that) == 1) (that, this) else (this, that)
+//    def minAndMax(that: Segment): (Segment, Segment) = if (compare(that) == 1) (that, this) else (this, that)
 
     def aboveBelow(that: Segment): (Segment, Segment) = {
       if (left.y > that.left.y) (this, that)
@@ -98,6 +110,11 @@ object World {
       else if (s >= 0.0 && s <= 1.0 && t >= 0.0 && t <= 1.0)
         Some(new Dot(p0_x + t * s1_x, p0_y + t * s1_y))
       else None
+    }
+
+    override def equals (that: Any) =  that match {
+      case that: Segment => left == that.left && right == that.right
+      case _ => false
     }
 
     lazy override val toString = s"[ $left , $right ]"

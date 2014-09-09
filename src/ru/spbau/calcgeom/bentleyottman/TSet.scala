@@ -63,13 +63,14 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
 
   sealed case class Node(var key: T, var left: Tree = Nil, var right: Tree = Nil, var parent: Tree = Nil) extends Tree {
 
-    def setRight(t:Tree) = t match {
+    def setRight(t: Tree) = t match {
       case Nil => right = t
-      case n:Node => right = t; n.parent = this
+      case n: Node => right = t; n.parent = this
     }
-    def setLeft(t:Tree) = t match {
+
+    def setLeft(t: Tree) = t match {
       case Nil => left = t
-      case n:Node => left = t; n.parent = this
+      case n: Node => left = t; n.parent = this
     }
 
     def childType: ChildType = parent match {
@@ -157,7 +158,7 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
       else this match {
         case Node(_, Nil, Nil, _) => parent match {
           case p@Node(_, l, _, _) if l == this => p setLeft Nil
-          case p@Node(_, _, r, _) if r == this => p setRight  Nil
+          case p@Node(_, _, r, _) if r == this => p setRight Nil
         }
         case Node(_, n: Node, Nil, _) => replaceWith(n)
         case Node(_, Nil, n: Node, _) => replaceWith(n)
@@ -196,7 +197,10 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
     override val isNode: Boolean = true
   }
 
-  def find(elem: T): Option[Node] = root find elem
+  def find(elem: T): Option[Node] = {
+    println(s"searching for $elem in $root")
+    root find elem
+  }
 
   override def headOption = root match {
     case Nil => None
@@ -261,20 +265,28 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
     this
   }
 
-  def nextNode(elem: T): Option[Node] = root find elem match {
-    case None => throw new NoSuchElementException
-    case Some(node: Node) => node.next flatMap (n => Some(n))
+  def nextNode(elem: T): Option[Node] = root match {
+    case Nil => None
+    case n: Node => if (n.min.key == elem) None
+    else root find elem match {
+      case None => throw new NoSuchElementException("No " + elem + " in " + toString())
+      case Some(node: Node) => node.prev flatMap (n => Some(n))
+    }
   }
 
-  def previousNode(elem: T): Option[Node] = root find elem match {
-    case None => throw new NoSuchElementException(toString())
-    case Some(node: Node) => node.prev flatMap (n => Some(n))
+  def previousNode(elem: T): Option[Node] = root match {
+    case Nil => None
+    case n: Node => if (n.min.key == elem) None
+    else root find elem match {
+      case None => throw new NoSuchElementException("No " + elem + " in " + toString())
+      case Some(node: Node) => node.prev flatMap (n => Some(n))
+    }
   }
 
   //use with caution for it is a hack needed to achieve good performance on bentley-ottman algorithm
-  def swapElements(fst:T, snd:T) = (root find fst, root find snd) match {
-    case (Some(e1),Some(e2)) => e1 swap e2
-    case _ => throw new  NoSuchElementException(toString())
+  def swapElements(fst: T, snd: T) = (root find fst, root find snd) match {
+    case (Some(e1), Some(e2)) => e1 swap e2
+    case _ => throw new NoSuchElementException(toString())
   }
 
   object Splay {
@@ -286,8 +298,8 @@ class TSet[T <% Ordered[T]] extends scala.collection.mutable.Set[T] {
       y.parent = x.parent
       x.childType match {
         case Root => root = y
-        case LeftChild => x.parent.forceNode setLeft  y
-        case RightChild => x.parent.forceNode setRight  y
+        case LeftChild => x.parent.forceNode setLeft y
+        case RightChild => x.parent.forceNode setRight y
       }
       y setLeft x
     }
